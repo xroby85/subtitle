@@ -1,0 +1,4 @@
+kivy>=2.2.0
+pytubefix>=6.0.0
+openai-whisper>=20231117
+pydub>=0.25.1
