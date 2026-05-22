@@ -12,10 +12,9 @@ requirements = python3,kivy,pytubefix,faster-whisper,ctranslate2
 android.permissions = INTERNET,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE,MANAGE_EXTERNAL_STORAGE
 android.api = 33
 android.minapi = 24
-android.ndk = 25b
+android.ndk = 28c
 android.archs = arm64-v8a
 android.accept_sdk_license = True
-android.skip_update = False
 
 fullscreen = 0
 orientation = portrait
