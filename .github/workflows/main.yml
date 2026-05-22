@@ -8,7 +8,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-22.04
-    timeout-minutes: 120
+    timeout-minutes: 180
 
     steps:
       - name: Checkout
@@ -33,7 +33,42 @@ jobs:
             autoconf libtool pkg-config \
             zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 \
             cmake libffi-dev libssl-dev automake \
-            zip unzip
+            zip unzip wget
+
+      - name: Pre-install Android SDK
+        run: |
+          SDK_DIR=$HOME/.buildozer/android/platform/android-sdk
+          mkdir -p $SDK_DIR/cmdline-tools
+
+          cd /tmp
+          wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+          unzip -q commandlinetools-linux-11076708_latest.zip
+
+          # Put cmdline-tools in place
+          mv cmdline-tools $SDK_DIR/cmdline-tools/latest
+
+          # Create tools/bin with symlinks so buildozer finds sdkmanager
+          mkdir -p $SDK_DIR/tools/bin
+          for f in $SDK_DIR/cmdline-tools/latest/bin/*; do
+            ln -sf "$f" "$SDK_DIR/tools/bin/$(basename $f)"
+          done
+
+          # Also copy lib
+          mkdir -p $SDK_DIR/tools/lib
+          cp -r $SDK_DIR/cmdline-tools/latest/lib/* $SDK_DIR/tools/lib/ 2>/dev/null || true
+
+          # Accept all licenses
+          yes | $SDK_DIR/tools/bin/sdkmanager --sdk_root=$SDK_DIR --licenses || true
+
+          # Install required components
+          yes | $SDK_DIR/tools/bin/sdkmanager --sdk_root=$SDK_DIR \
+            "platform-tools" "build-tools;33.0.2" "platforms;android-33"
+
+          # Verify
+          echo "sdkmanager:"
+          ls -la $SDK_DIR/tools/bin/sdkmanager
+          echo "build-tools:"
+          ls $SDK_DIR/build-tools/ 2>/dev/null || echo "not found yet (buildozer will install)"
 
       - name: Install buildozer
         run: |
@@ -49,28 +84,9 @@ jobs:
           key: buildozer-${{ runner.os }}-${{ hashFiles('buildozer.spec') }}
           restore-keys: buildozer-${{ runner.os }}-
 
-      - name: Accept Android SDK licenses
-        run: |
-          # Create licenses directory
-          mkdir -p $ANDROID_HOME/licenses 2>/dev/null || true
-          mkdir -p ~/.buildozer/android/platform/android-sdk/licenses 2>/dev/null || true
-
-          # Accept all licenses
-          LICENSES=(
-            "24333f8a63b6825ea9c5514f83c2829b004d1fee"
-            "d56f5187479451eabf01fb78af6dfcb131a6481e"
-            "84831b9409646a918e30573bab4c9c91346d8abd"
-            "e6b7c2ab7fa2298c15165e9583d0222b24b9a170"
-          )
-
-          for lic in "${LICENSES[@]}"; do
-            echo -e "\n$lic" >> $ANDROID_HOME/licenses/android-sdk-license 2>/dev/null || true
-            echo -e "\n$lic" >> ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-license 2>/dev/null || true
-          done
-
       - name: Build APK
         run: |
-          yes | buildozer -v android debug 2>&1 | tail -300
+          yes | buildozer -v android debug 2>&1 | tail -500
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
