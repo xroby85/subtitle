@@ -15,7 +15,6 @@ android.minapi = 24
 android.ndk = 28c
 android.archs = arm64-v8a
 android.accept_sdk_license = True
-android.skip_update = True
 
 fullscreen = 0
 orientation = portrait
